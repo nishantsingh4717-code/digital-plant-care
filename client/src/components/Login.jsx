@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import API_URL from "../services/api";
 
 function Login({ onLogin }) {
   const [email, setEmail] = useState("");
@@ -10,7 +11,7 @@ function Login({ onLogin }) {
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    if (!email || !password) {
+    if (!email.trim() || !password) {
       setMessage("❌ Email and password are required.");
       return;
     }
@@ -19,15 +20,20 @@ function Login({ onLogin }) {
       setLoading(true);
       setMessage("");
 
+      console.log(
+        "Login API URL:",
+        `${API_URL}/auth/login`
+      );
+
       const response = await fetch(
-        "http://localhost:5000/api/auth/login",
+        `${API_URL}/auth/login`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            email,
+            email: email.trim(),
             password,
           }),
         }
@@ -35,6 +41,7 @@ function Login({ onLogin }) {
 
       const data = await response.json();
 
+      console.log("Login Status:", response.status);
       console.log("Login Response:", data);
 
       if (!response.ok) {
@@ -43,10 +50,17 @@ function Login({ onLogin }) {
         );
       }
 
-      // Save JWT token
-      localStorage.setItem("token", data.token);
+      if (!data.token) {
+        throw new Error(
+          "Login failed. Token not received."
+        );
+      }
 
-      // Save user information
+      localStorage.setItem(
+        "token",
+        data.token
+      );
+
       localStorage.setItem(
         "user",
         JSON.stringify(data.user)
@@ -54,16 +68,21 @@ function Login({ onLogin }) {
 
       setMessage("✅ Login successful!");
 
-      // Tell App that login is successful
       if (onLogin) {
         onLogin(data.user);
       }
 
     } catch (error) {
-      console.error("Login Error:", error);
+      console.error(
+        "❌ Login Error:",
+        error
+      );
 
       setMessage(
-        `❌ ${error.message}`
+        `❌ ${
+          error.message ||
+          "Unable to connect to server."
+        }`
       );
 
     } finally {
@@ -107,6 +126,7 @@ function Login({ onLogin }) {
               onChange={(e) =>
                 setEmail(e.target.value)
               }
+              required
             />
 
           </div>
@@ -124,6 +144,7 @@ function Login({ onLogin }) {
               onChange={(e) =>
                 setPassword(e.target.value)
               }
+              required
             />
 
           </div>

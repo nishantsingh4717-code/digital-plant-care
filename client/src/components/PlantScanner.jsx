@@ -31,6 +31,8 @@ function PlantScanner() {
         streamRef.current.getTracks().forEach((track) => {
           track.stop();
         });
+
+        streamRef.current = null;
       }
 
       if (image) {
@@ -85,11 +87,105 @@ function PlantScanner() {
       URL.revokeObjectURL(image);
     }
 
-    const previewUrl =
-      URL.createObjectURL(selectedFile);
+    const previewUrl = URL.createObjectURL(selectedFile);
 
     setFile(selectedFile);
     setImage(previewUrl);
+  };
+
+  // =========================================================
+  // TURN FLASHLIGHT ON
+  // =========================================================
+
+  const turnFlashlightOn = async (stream) => {
+    try {
+      const videoTrack = stream.getVideoTracks()[0];
+
+      if (!videoTrack) {
+        console.log("🔦 No video track found.");
+        return false;
+      }
+
+      // Check whether torch is supported
+      const capabilities =
+        typeof videoTrack.getCapabilities === "function"
+          ? videoTrack.getCapabilities()
+          : {};
+
+      console.log("📷 Camera Capabilities:", capabilities);
+
+      if (!capabilities.torch) {
+        console.log(
+          "🔦 Flashlight/Torch is not supported on this device."
+        );
+
+        return false;
+      }
+
+      await videoTrack.applyConstraints({
+        advanced: [
+          {
+            torch: true,
+          },
+        ],
+      });
+
+      console.log("🔦 Flashlight ON");
+
+      return true;
+    } catch (err) {
+      console.error(
+        "🔦 Flashlight ON Error:",
+        err
+      );
+
+      return false;
+    }
+  };
+
+  // =========================================================
+  // TURN FLASHLIGHT OFF
+  // =========================================================
+
+  const turnFlashlightOff = async () => {
+    try {
+      const stream = streamRef.current;
+
+      if (!stream) {
+        return;
+      }
+
+      const videoTrack =
+        stream.getVideoTracks()[0];
+
+      if (!videoTrack) {
+        return;
+      }
+
+      const capabilities =
+        typeof videoTrack.getCapabilities === "function"
+          ? videoTrack.getCapabilities()
+          : {};
+
+      if (!capabilities.torch) {
+        return;
+      }
+
+      await videoTrack.applyConstraints({
+        advanced: [
+          {
+            torch: false,
+          },
+        ],
+      });
+
+      console.log("🔦 Flashlight OFF");
+    } catch (err) {
+      console.error(
+        "🔦 Flashlight OFF Error:",
+        err
+      );
+    }
   };
 
   // =========================================================
@@ -119,6 +215,13 @@ function PlantScanner() {
         });
 
       streamRef.current = stream;
+
+      // =====================================================
+      // TURN FLASHLIGHT ON AUTOMATICALLY
+      // =====================================================
+
+      await turnFlashlightOn(stream);
+
       setCameraOpen(true);
 
       setTimeout(() => {
@@ -151,7 +254,10 @@ function PlantScanner() {
   // CLOSE CAMERA
   // =========================================================
 
-  const closeCamera = () => {
+  const closeCamera = async () => {
+    // First turn flashlight OFF
+    await turnFlashlightOff();
+
     if (streamRef.current) {
       streamRef.current
         .getTracks()
@@ -160,6 +266,10 @@ function PlantScanner() {
         });
 
       streamRef.current = null;
+    }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
 
     setCameraOpen(false);
@@ -237,6 +347,7 @@ function PlantScanner() {
         setError("");
         setSuccess("");
 
+        // Close camera and turn flashlight OFF
         closeCamera();
       },
       "image/jpeg",
@@ -290,9 +401,6 @@ function PlantScanner() {
 
       formData.append("image", file);
 
-      // IMPORTANT:
-      // API_URL comes from centralized services/api.js
-
       const response = await fetch(
         `${API_URL}/ai/analyze`,
         {
@@ -331,10 +439,6 @@ function PlantScanner() {
         data
       );
 
-      // =====================================================
-      // UNAUTHORIZED
-      // =====================================================
-
       if (response.status === 401) {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
@@ -344,10 +448,6 @@ function PlantScanner() {
         );
       }
 
-      // =====================================================
-      // API ERROR
-      // =====================================================
-
       if (!response.ok) {
         throw new Error(
           data.error ||
@@ -355,10 +455,6 @@ function PlantScanner() {
             `Request failed with status ${response.status}`
         );
       }
-
-      // =====================================================
-      // CHECK AI RESULT
-      // =====================================================
 
       if (!data.analysis) {
         throw new Error(
@@ -477,10 +573,6 @@ function PlantScanner() {
         "My Garden"
       );
 
-      // =====================================================
-      // CARE TIPS
-      // =====================================================
-
       if (
         Array.isArray(result.careTips)
       ) {
@@ -492,19 +584,12 @@ function PlantScanner() {
         );
       }
 
-      // =====================================================
-      // IMAGE
-      // =====================================================
-
       if (file) {
         formData.append(
           "image",
           file
         );
       }
-
-      // IMPORTANT:
-      // Centralized API_URL
 
       const response = await fetch(
         `${API_URL}/plants/add`,
@@ -544,10 +629,6 @@ function PlantScanner() {
         data
       );
 
-      // =====================================================
-      // UNAUTHORIZED
-      // =====================================================
-
       if (response.status === 401) {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
@@ -556,10 +637,6 @@ function PlantScanner() {
           "Your login session has expired. Please login again."
         );
       }
-
-      // =====================================================
-      // API ERROR
-      // =====================================================
 
       if (!response.ok) {
         throw new Error(
@@ -659,10 +736,6 @@ function PlantScanner() {
   return (
     <div className="plant-scanner">
 
-      {/* =====================================================
-          EMPTY STATE
-      ===================================================== */}
-
       {!image && (
         <div className="scanner-empty">
 
@@ -715,10 +788,6 @@ function PlantScanner() {
 
         </div>
       )}
-
-      {/* =====================================================
-          IMAGE PREVIEW
-      ===================================================== */}
 
       {image && (
         <div className="image-preview-container">
@@ -789,29 +858,17 @@ function PlantScanner() {
         </div>
       )}
 
-      {/* =====================================================
-          ERROR
-      ===================================================== */}
-
       {error && (
         <div className="scanner-error">
           ❌ {error}
         </div>
       )}
 
-      {/* =====================================================
-          SUCCESS
-      ===================================================== */}
-
       {success && (
         <div className="scanner-success">
           {success}
         </div>
       )}
-
-      {/* =====================================================
-          AI RESULT
-      ===================================================== */}
 
       {result && (
         <div className="plant-result">
@@ -919,8 +976,6 @@ function PlantScanner() {
 
           </div>
 
-          {/* DESCRIPTION */}
-
           {result.description && (
             <div className="result-description">
 
@@ -934,8 +989,6 @@ function PlantScanner() {
 
             </div>
           )}
-
-          {/* CARE TIPS */}
 
           {Array.isArray(
             result.careTips
@@ -955,6 +1008,7 @@ function PlantScanner() {
                         className="tip-item"
                         key={index}
                       >
+
                         <span>
                           ✓
                         </span>
@@ -962,6 +1016,7 @@ function PlantScanner() {
                         <p>
                           {tip}
                         </p>
+
                       </div>
                     )
                   )}
@@ -970,8 +1025,6 @@ function PlantScanner() {
 
               </div>
             )}
-
-          {/* SAVE */}
 
           <div className="save-plant-section">
 
@@ -999,8 +1052,6 @@ function PlantScanner() {
             )}
 
           </div>
-
-          {/* SCAN AGAIN */}
 
           {saved && (
             <button

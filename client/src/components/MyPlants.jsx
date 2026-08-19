@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import API_URL from "../services/api";
 
 const MyPlants = () => {
   const [plants, setPlants] = useState([]);
@@ -8,7 +9,8 @@ const MyPlants = () => {
   useEffect(() => {
     const fetchPlants = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token =
+          localStorage.getItem("token");
 
         if (!token) {
           setError("Please login first.");
@@ -16,8 +18,13 @@ const MyPlants = () => {
           return;
         }
 
+        console.log(
+          "My Plants API URL:",
+          `${API_URL}/plants`
+        );
+
         const response = await fetch(
-          "http://localhost:5000/api/plants",
+          `${API_URL}/plants`,
           {
             method: "GET",
             headers: {
@@ -28,18 +35,47 @@ const MyPlants = () => {
 
         const data = await response.json();
 
-        console.log("My Plants Response:", data);
+        console.log(
+          "My Plants Status:",
+          response.status
+        );
+
+        console.log(
+          "My Plants Response:",
+          data
+        );
+
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+
+          setError(
+            "Session expired. Please login again."
+          );
+
+          return;
+        }
 
         if (!response.ok) {
           throw new Error(
-            data.message || "Failed to fetch plants"
+            data.message ||
+              "Failed to fetch plants"
           );
         }
 
         setPlants(data.plants || []);
+
       } catch (error) {
-        console.error("❌ My Plants Error:", error);
-        setError(error.message);
+        console.error(
+          "❌ My Plants Error:",
+          error
+        );
+
+        setError(
+          error.message ||
+            "Failed to fetch plants."
+        );
+
       } finally {
         setLoading(false);
       }
@@ -62,7 +98,9 @@ const MyPlants = () => {
     <div className="my-plants-page">
 
       <div className="my-plants-header">
+
         <div>
+
           <span className="small-title">
             MY COLLECTION
           </span>
@@ -74,12 +112,16 @@ const MyPlants = () => {
           <p>
             View and manage all your saved plants.
           </p>
+
         </div>
 
         <div className="plant-count">
           {plants.length} Plant
-          {plants.length !== 1 ? "s" : ""}
+          {plants.length !== 1
+            ? "s"
+            : ""}
         </div>
+
       </div>
 
       {error && (
@@ -88,51 +130,68 @@ const MyPlants = () => {
         </div>
       )}
 
-      {!error && plants.length === 0 && (
-        <div className="empty-plants">
-          <div className="empty-icon">
-            🌿
+      {!error &&
+        plants.length === 0 && (
+
+          <div className="empty-plants">
+
+            <div className="empty-icon">
+              🌿
+            </div>
+
+            <h2>
+              No Plants Saved Yet
+            </h2>
+
+            <p>
+              Scan a plant and save it
+              to your collection.
+            </p>
+
+            <a href="/#scanner">
+              🌱 Scan Your First Plant
+            </a>
+
           </div>
 
-          <h2>
-            No Plants Saved Yet
-          </h2>
-
-          <p>
-            Scan a plant and save it to your collection.
-          </p>
-
-          <a href="/#scanner">
-            🌱 Scan Your First Plant
-          </a>
-        </div>
-      )}
+        )}
 
       {plants.length > 0 && (
+
         <div className="my-plants-grid">
 
           {plants.map((plant) => (
+
             <div
               className="saved-plant-card"
               key={plant._id}
             >
 
               {plant.image ? (
+
                 <img
                   src={plant.image}
-                  alt={plant.plantName || "Plant"}
+                  alt={
+                    plant.plantName ||
+                    "Plant"
+                  }
                   className="saved-plant-image"
                 />
+
               ) : (
+
                 <div className="no-plant-image">
                   🌱
                 </div>
+
               )}
 
               <div className="saved-plant-content">
 
                 <h2>
-                  🌿 {plant.plantName || "Unknown Plant"}
+                  🌿{" "}
+                  {plant.plantName ||
+                    "Unknown Plant"}
                 </h2>
 
                 <p className="scientific-name">
@@ -143,7 +202,9 @@ const MyPlants = () => {
                 <div className="plant-info-grid">
 
                   <div>
-                    <span>🌱 Plant Type</span>
+                    <span>
+                      🌱 Plant Type
+                    </span>
                     <strong>
                       {plant.plantType ||
                         "Not available"}
@@ -151,7 +212,9 @@ const MyPlants = () => {
                   </div>
 
                   <div>
-                    <span>❤️ Health</span>
+                    <span>
+                      ❤️ Health
+                    </span>
                     <strong>
                       {plant.healthStatus ||
                         "Healthy"}
@@ -159,14 +222,19 @@ const MyPlants = () => {
                   </div>
 
                   <div>
-                    <span>🦠 Disease</span>
+                    <span>
+                      🦠 Disease
+                    </span>
                     <strong>
-                      {plant.disease || "None"}
+                      {plant.disease ||
+                        "None"}
                     </strong>
                   </div>
 
                   <div>
-                    <span>💧 Water</span>
+                    <span>
+                      💧 Water
+                    </span>
                     <strong>
                       {plant.waterFrequency ||
                         "Not available"}
@@ -174,7 +242,9 @@ const MyPlants = () => {
                   </div>
 
                   <div>
-                    <span>☀️ Sunlight</span>
+                    <span>
+                      ☀️ Sunlight
+                    </span>
                     <strong>
                       {plant.sunlight ||
                         "Not available"}
@@ -182,7 +252,9 @@ const MyPlants = () => {
                   </div>
 
                   <div>
-                    <span>🌡️ Temperature</span>
+                    <span>
+                      🌡️ Temperature
+                    </span>
                     <strong>
                       {plant.temperature ||
                         "Not available"}
@@ -190,7 +262,9 @@ const MyPlants = () => {
                   </div>
 
                   <div>
-                    <span>💦 Humidity</span>
+                    <span>
+                      💦 Humidity
+                    </span>
                     <strong>
                       {plant.humidity ||
                         "Not available"}
@@ -198,7 +272,9 @@ const MyPlants = () => {
                   </div>
 
                   <div>
-                    <span>🌾 Fertilizer</span>
+                    <span>
+                      🌾 Fertilizer
+                    </span>
                     <strong>
                       {plant.fertilizer ||
                         "Not available"}
@@ -208,7 +284,9 @@ const MyPlants = () => {
                 </div>
 
                 {plant.description && (
+
                   <div className="plant-description">
+
                     <h3>
                       📖 About This Plant
                     </h3>
@@ -216,15 +294,19 @@ const MyPlants = () => {
                     <p>
                       {plant.description}
                     </p>
+
                   </div>
+
                 )}
 
               </div>
 
             </div>
+
           ))}
 
         </div>
+
       )}
 
     </div>
