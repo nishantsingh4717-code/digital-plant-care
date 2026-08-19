@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import API_URL from "../services/api";
+
 function MyPlants() {
   const navigate = useNavigate();
 
@@ -9,6 +11,10 @@ function MyPlants() {
   const [error, setError] = useState("");
   const [editingPlant, setEditingPlant] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  // =========================================================
+  // FETCH MY PLANTS
+  // =========================================================
 
   const fetchPlants = async () => {
     try {
@@ -22,21 +28,22 @@ function MyPlants() {
         return;
       }
 
-      const response = await fetch(
-        "http://localhost:5000/api/plants",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(`${API_URL}/plants`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       const data = await response.json();
+
+      console.log("My Plants Response:", data);
 
       if (!response.ok) {
         if (response.status === 401) {
           localStorage.removeItem("token");
           localStorage.removeItem("user");
+
           navigate("/login");
           return;
         }
@@ -48,7 +55,8 @@ function MyPlants() {
 
       setPlants(data.plants || []);
     } catch (err) {
-      console.error("My Plants Error:", err);
+      console.error("❌ My Plants Error:", err);
+
       setError(
         err.message || "Failed to load your plants."
       );
@@ -57,9 +65,17 @@ function MyPlants() {
     }
   };
 
+  // =========================================================
+  // LOAD PLANTS
+  // =========================================================
+
   useEffect(() => {
     fetchPlants();
   }, []);
+
+  // =========================================================
+  // OPEN EDIT MODAL
+  // =========================================================
 
   const openEdit = (plant) => {
     setEditingPlant({
@@ -69,9 +85,19 @@ function MyPlants() {
     setError("");
   };
 
+  // =========================================================
+  // CLOSE EDIT MODAL
+  // =========================================================
+
   const closeEdit = () => {
+    if (saving) return;
+
     setEditingPlant(null);
   };
+
+  // =========================================================
+  // HANDLE EDIT INPUT
+  // =========================================================
 
   const handleEditChange = (event) => {
     const { name, value } = event.target;
@@ -82,10 +108,16 @@ function MyPlants() {
     }));
   };
 
+  // =========================================================
+  // UPDATE PLANT
+  // =========================================================
+
   const updatePlant = async (event) => {
     event.preventDefault();
 
-    if (!editingPlant) return;
+    if (!editingPlant) {
+      return;
+    }
 
     try {
       setSaving(true);
@@ -150,63 +182,121 @@ function MyPlants() {
         editingPlant.location || ""
       );
 
+      // =====================================================
+      // UPDATE API
+      // =====================================================
+
       const response = await fetch(
-        `http://localhost:5000/api/plants/${editingPlant._id}`,
+        `${API_URL}/plants/${editingPlant._id}`,
         {
           method: "PUT",
+
           headers: {
             Authorization: `Bearer ${token}`,
           },
+
           body: formData,
         }
       );
 
       const data = await response.json();
 
-      console.log("Update Plant Response:", data);
+      console.log(
+        "Update Plant Status:",
+        response.status
+      );
+
+      console.log(
+        "Update Plant Response:",
+        data
+      );
+
+      // =====================================================
+      // UNAUTHORIZED
+      // =====================================================
+
+      if (response.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+
+        navigate("/login");
+        return;
+      }
+
+      // =====================================================
+      // ERROR
+      // =====================================================
 
       if (!response.ok) {
         throw new Error(
-          data.message || "Failed to update plant"
+          data.message ||
+            data.error ||
+            "Failed to update plant"
         );
       }
 
-      setPlants((previousPlants) =>
-        previousPlants.map((plant) =>
-          plant._id === data.plant._id
-            ? data.plant
-            : plant
-        )
-      );
+      // =====================================================
+      // UPDATE LOCAL STATE
+      // =====================================================
+
+      if (data.plant) {
+        setPlants((previousPlants) =>
+          previousPlants.map((plant) =>
+            plant._id === data.plant._id
+              ? data.plant
+              : plant
+          )
+        );
+      } else {
+        // If backend doesn't return updated plant,
+        // reload plants from database.
+        await fetchPlants();
+      }
 
       setEditingPlant(null);
     } catch (err) {
-      console.error("Update Plant Error:", err);
+      console.error(
+        "❌ Update Plant Error:",
+        err
+      );
 
       setError(
-        err.message || "Failed to update plant."
+        err.message ||
+          "Failed to update plant."
       );
     } finally {
       setSaving(false);
     }
   };
 
+  // =========================================================
+  // DELETE PLANT
+  // =========================================================
+
   const deletePlant = async (plantId) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this plant?"
     );
 
-    if (!confirmDelete) return;
+    if (!confirmDelete) {
+      return;
+    }
 
     try {
       setError("");
 
       const token = localStorage.getItem("token");
 
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
       const response = await fetch(
-        `http://localhost:5000/api/plants/${plantId}`,
+        `${API_URL}/plants/${plantId}`,
         {
           method: "DELETE",
+
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -215,11 +305,43 @@ function MyPlants() {
 
       const data = await response.json();
 
+      console.log(
+        "Delete Plant Status:",
+        response.status
+      );
+
+      console.log(
+        "Delete Plant Response:",
+        data
+      );
+
+      // =====================================================
+      // UNAUTHORIZED
+      // =====================================================
+
+      if (response.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+
+        navigate("/login");
+        return;
+      }
+
+      // =====================================================
+      // ERROR
+      // =====================================================
+
       if (!response.ok) {
         throw new Error(
-          data.message || "Failed to delete plant"
+          data.message ||
+            data.error ||
+            "Failed to delete plant"
         );
       }
+
+      // =====================================================
+      // REMOVE FROM UI
+      // =====================================================
 
       setPlants((previousPlants) =>
         previousPlants.filter(
@@ -227,13 +349,21 @@ function MyPlants() {
         )
       );
     } catch (err) {
-      console.error("Delete Plant Error:", err);
+      console.error(
+        "❌ Delete Plant Error:",
+        err
+      );
 
       setError(
-        err.message || "Failed to delete plant."
+        err.message ||
+          "Failed to delete plant."
       );
     }
   };
+
+  // =========================================================
+  // LOADING SCREEN
+  // =========================================================
 
   if (loading) {
     return (
@@ -245,21 +375,33 @@ function MyPlants() {
     );
   }
 
+  // =========================================================
+  // MAIN PAGE
+  // =========================================================
+
   return (
     <div className="my-plants-page">
+
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
 
       <div className="my-plants-header">
 
         <div>
+
           <span className="small-title">
             MY COLLECTION
           </span>
 
-          <h1>🌿 My Plants</h1>
+          <h1>
+            🌿 My Plants
+          </h1>
 
           <p>
             Manage and monitor all your saved plants.
           </p>
+
         </div>
 
         <button
@@ -272,13 +414,22 @@ function MyPlants() {
 
       </div>
 
+      {/* =====================================================
+          ERROR
+      ===================================================== */}
+
       {error && (
         <div className="my-plants-error">
           ❌ {error}
         </div>
       )}
 
+      {/* =====================================================
+          EMPTY STATE
+      ===================================================== */}
+
       {plants.length === 0 ? (
+
         <div className="empty-plants">
 
           <div className="empty-plants-icon">
@@ -302,29 +453,51 @@ function MyPlants() {
           </button>
 
         </div>
+
       ) : (
+
+        /* =====================================================
+           PLANTS GRID
+        ===================================================== */
+
         <div className="plants-grid">
 
           {plants.map((plant) => (
+
             <div
               className="saved-plant-card"
               key={plant._id}
             >
 
+              {/* =================================================
+                  IMAGE
+              ================================================= */}
+
               <div className="saved-plant-image">
 
                 {plant.image ? (
+
                   <img
                     src={plant.image}
-                    alt={plant.plantName}
+                    alt={
+                      plant.plantName ||
+                      "Plant"
+                    }
                   />
+
                 ) : (
+
                   <div className="no-plant-image">
                     🌱
                   </div>
+
                 )}
 
               </div>
+
+              {/* =================================================
+                  CONTENT
+              ================================================= */}
 
               <div className="saved-plant-content">
 
@@ -338,10 +511,16 @@ function MyPlants() {
                 </h2>
 
                 {plant.scientificName && (
+
                   <p className="scientific-name">
                     {plant.scientificName}
                   </p>
+
                 )}
+
+                {/* =================================================
+                    PLANT INFO
+                ================================================= */}
 
                 <div className="saved-plant-info">
 
@@ -383,8 +562,94 @@ function MyPlants() {
 
                 </div>
 
+                {/* =================================================
+                    FERTILIZER
+                ================================================= */}
+
+                {plant.fertilizer && (
+
+                  <div className="saved-plant-fertilizer">
+
+                    <strong>
+                      🌾 Fertilizer
+                    </strong>
+
+                    <p>
+                      {plant.fertilizer}
+                    </p>
+
+                  </div>
+
+                )}
+
+                {/* =================================================
+                    HEALTH
+                ================================================= */}
+
+                {plant.healthStatus && (
+
+                  <div className="saved-plant-health">
+
+                    <strong>
+                      ❤️ Health
+                    </strong>
+
+                    <p>
+                      {plant.healthStatus}
+                    </p>
+
+                  </div>
+
+                )}
+
+                {/* =================================================
+                    DISEASE
+                ================================================= */}
+
+                {plant.disease && (
+
+                  <div className="saved-plant-disease">
+
+                    <strong>
+                      🦠 Disease
+                    </strong>
+
+                    <p>
+                      {plant.disease}
+                    </p>
+
+                  </div>
+
+                )}
+
+                {/* =================================================
+                    LOCATION
+                ================================================= */}
+
+                {plant.location && (
+
+                  <div className="saved-plant-location">
+
+                    <strong>
+                      📍 Location
+                    </strong>
+
+                    <p>
+                      {plant.location}
+                    </p>
+
+                  </div>
+
+                )}
+
+                {/* =================================================
+                    DESCRIPTION
+                ================================================= */}
+
                 {plant.description && (
+
                   <div className="saved-plant-description">
+
                     <strong>
                       📖 About
                     </strong>
@@ -392,8 +657,14 @@ function MyPlants() {
                     <p>
                       {plant.description}
                     </p>
+
                   </div>
+
                 )}
+
+                {/* =================================================
+                    ACTIONS
+                ================================================= */}
 
                 <div className="saved-plant-actions">
 
@@ -422,19 +693,31 @@ function MyPlants() {
               </div>
 
             </div>
+
           ))}
 
         </div>
+
       )}
 
+      {/* =====================================================
+          EDIT MODAL
+      ===================================================== */}
+
       {editingPlant && (
+
         <div className="edit-modal-overlay">
 
           <div className="edit-modal">
 
+            {/* =================================================
+                MODAL HEADER
+            ================================================= */}
+
             <div className="edit-modal-header">
 
               <div>
+
                 <span className="small-title">
                   UPDATE PLANT
                 </span>
@@ -442,23 +725,32 @@ function MyPlants() {
                 <h2>
                   ✏️ Edit Plant
                 </h2>
+
               </div>
 
               <button
                 type="button"
                 className="close-edit-button"
                 onClick={closeEdit}
+                disabled={saving}
               >
                 ✕
               </button>
 
             </div>
 
+            {/* =================================================
+                EDIT FORM
+            ================================================= */}
+
             <form onSubmit={updatePlant}>
 
               <div className="edit-form-grid">
 
+                {/* Plant Name */}
+
                 <div className="edit-form-group">
+
                   <label>
                     Plant Name
                   </label>
@@ -467,14 +759,19 @@ function MyPlants() {
                     type="text"
                     name="plantName"
                     value={
-                      editingPlant.plantName || ""
+                      editingPlant.plantName ||
+                      ""
                     }
                     onChange={handleEditChange}
                     required
                   />
+
                 </div>
 
+                {/* Scientific Name */}
+
                 <div className="edit-form-group">
+
                   <label>
                     Scientific Name
                   </label>
@@ -488,9 +785,13 @@ function MyPlants() {
                     }
                     onChange={handleEditChange}
                   />
+
                 </div>
 
+                {/* Plant Type */}
+
                 <div className="edit-form-group">
+
                   <label>
                     Plant Type
                   </label>
@@ -499,14 +800,19 @@ function MyPlants() {
                     type="text"
                     name="plantType"
                     value={
-                      editingPlant.plantType || ""
+                      editingPlant.plantType ||
+                      ""
                     }
                     onChange={handleEditChange}
                     required
                   />
+
                 </div>
 
+                {/* Water */}
+
                 <div className="edit-form-group">
+
                   <label>
                     Water Frequency
                   </label>
@@ -520,9 +826,13 @@ function MyPlants() {
                     }
                     onChange={handleEditChange}
                   />
+
                 </div>
 
+                {/* Sunlight */}
+
                 <div className="edit-form-group">
+
                   <label>
                     Sunlight
                   </label>
@@ -531,13 +841,18 @@ function MyPlants() {
                     type="text"
                     name="sunlight"
                     value={
-                      editingPlant.sunlight || ""
+                      editingPlant.sunlight ||
+                      ""
                     }
                     onChange={handleEditChange}
                   />
+
                 </div>
 
+                {/* Temperature */}
+
                 <div className="edit-form-group">
+
                   <label>
                     Temperature
                   </label>
@@ -546,13 +861,18 @@ function MyPlants() {
                     type="text"
                     name="temperature"
                     value={
-                      editingPlant.temperature || ""
+                      editingPlant.temperature ||
+                      ""
                     }
                     onChange={handleEditChange}
                   />
+
                 </div>
 
+                {/* Humidity */}
+
                 <div className="edit-form-group">
+
                   <label>
                     Humidity
                   </label>
@@ -561,13 +881,18 @@ function MyPlants() {
                     type="text"
                     name="humidity"
                     value={
-                      editingPlant.humidity || ""
+                      editingPlant.humidity ||
+                      ""
                     }
                     onChange={handleEditChange}
                   />
+
                 </div>
 
+                {/* Fertilizer */}
+
                 <div className="edit-form-group">
+
                   <label>
                     Fertilizer
                   </label>
@@ -576,15 +901,20 @@ function MyPlants() {
                     type="text"
                     name="fertilizer"
                     value={
-                      editingPlant.fertilizer || ""
+                      editingPlant.fertilizer ||
+                      ""
                     }
                     onChange={handleEditChange}
                   />
+
                 </div>
 
               </div>
 
+              {/* Location */}
+
               <div className="edit-form-group full-width">
+
                 <label>
                   Location
                 </label>
@@ -593,13 +923,18 @@ function MyPlants() {
                   type="text"
                   name="location"
                   value={
-                    editingPlant.location || ""
+                    editingPlant.location ||
+                    ""
                   }
                   onChange={handleEditChange}
                 />
+
               </div>
 
+              {/* Description */}
+
               <div className="edit-form-group full-width">
+
                 <label>
                   Description
                 </label>
@@ -608,11 +943,15 @@ function MyPlants() {
                   name="description"
                   rows="4"
                   value={
-                    editingPlant.description || ""
+                    editingPlant.description ||
+                    ""
                   }
                   onChange={handleEditChange}
                 />
+
               </div>
+
+              {/* Modal Buttons */}
 
               <div className="edit-modal-actions">
 
@@ -642,6 +981,7 @@ function MyPlants() {
           </div>
 
         </div>
+
       )}
 
     </div>

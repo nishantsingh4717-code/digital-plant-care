@@ -22,7 +22,8 @@ function Login() {
 
     setError("");
 
-    if (!email.trim() || !password) {
+    // Basic validation
+    if (!email.trim() || !password.trim()) {
       setError("Please enter your email and password.");
       return;
     }
@@ -30,39 +31,41 @@ function Login() {
     try {
       setLoading(true);
 
-      const response = await fetch(
-        `${API_URL}/auth/login`,
-        {
-          method: "POST",
+      console.log("Login API URL:", `${API_URL}/auth/login`);
 
-          headers: {
-            "Content-Type": "application/json",
-          },
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
 
-          body: JSON.stringify({
-            email: email.trim(),
-            password,
-          }),
-        }
-      );
+        headers: {
+          "Content-Type": "application/json",
+        },
 
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password,
+        }),
+      });
+
+      // Get response safely
       const responseText = await response.text();
 
-      let data;
+      let data = {};
 
       try {
-        data = JSON.parse(responseText);
-      } catch {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (parseError) {
+        console.error("Invalid JSON response:", responseText);
+
         data = {
           message:
-            responseText ||
-            "Invalid response from server.",
+            responseText || "Invalid response received from server.",
         };
       }
 
       console.log("Login API Status:", response.status);
       console.log("Login API Response:", data);
 
+      // API error
       if (!response.ok) {
         throw new Error(
           data.message ||
@@ -71,13 +74,17 @@ function Login() {
         );
       }
 
-      if (!data.token || !data.user) {
-        throw new Error(
-          "Login response is missing user or token."
-        );
+      // Check token
+      if (!data.token) {
+        throw new Error("Login failed. Token not received.");
       }
 
-      // Save login information through AuthContext
+      // User may sometimes be returned as data.user
+      if (!data.user) {
+        throw new Error("Login failed. User information not received.");
+      }
+
+      // Save login information
       login(data.user, data.token);
 
       // Remember Me
@@ -87,15 +94,28 @@ function Login() {
         localStorage.removeItem("rememberMe");
       }
 
-      // Go to Home
-      navigate("/", { replace: true });
-    } catch (error) {
-      console.error("❌ Login Error:", error);
+      // Successful login
+      console.log("✅ Login successful");
 
-      setError(
-        error.message ||
-          "Unable to connect to server. Please try again."
-      );
+      navigate("/", {
+        replace: true,
+      });
+    } catch (err) {
+      console.error("❌ Login Error:", err);
+
+      // Network error
+      if (
+        err.name === "TypeError" &&
+        err.message === "Failed to fetch"
+      ) {
+        setError(
+          "Unable to connect to server. Please make sure backend is running on port 5000."
+        );
+      } else {
+        setError(
+          err.message || "Unable to login. Please try again."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -104,8 +124,7 @@ function Login() {
   return (
     <div className="auth-page">
 
-      {/* Decorative leaves */}
-
+      {/* Decorative Leaves */}
       <div className="leaf-decoration leaf-one">
         🍃
       </div>
@@ -117,7 +136,6 @@ function Login() {
       <div className="leaf-decoration leaf-three">
         🍃
       </div>
-
 
       <div className="login-container">
 
@@ -148,9 +166,7 @@ function Login() {
             your journey towards healthier plants.
           </p>
 
-
           {/* Feature 1 */}
-
           <div className="login-feature">
 
             <div className="feature-icon">
@@ -169,9 +185,7 @@ function Login() {
 
           </div>
 
-
           {/* Feature 2 */}
-
           <div className="login-feature">
 
             <div className="feature-icon">
@@ -190,9 +204,7 @@ function Login() {
 
           </div>
 
-
           {/* Feature 3 */}
-
           <div className="login-feature">
 
             <div className="feature-icon">
@@ -213,7 +225,6 @@ function Login() {
 
         </div>
 
-
         {/* =========================
             LOGIN CARD
         ========================= */}
@@ -232,19 +243,18 @@ function Login() {
             Enter your credentials to access your account
           </p>
 
-
-          {/* Error */}
-
+          {/* Error Message */}
           {error && (
             <div className="login-error">
               ⚠️ {error}
             </div>
           )}
 
-
           <form onSubmit={handleSubmit}>
 
-            {/* Email */}
+            {/* =========================
+                EMAIL
+            ========================= */}
 
             <div className="login-form-group">
 
@@ -274,8 +284,9 @@ function Login() {
 
             </div>
 
-
-            {/* Password */}
+            {/* =========================
+                PASSWORD
+            ========================= */}
 
             <div className="login-form-group">
 
@@ -310,7 +321,7 @@ function Login() {
                   className="password-toggle"
                   onClick={() =>
                     setShowPassword(
-                      !showPassword
+                      (previous) => !previous
                     )
                   }
                   aria-label={
@@ -326,8 +337,9 @@ function Login() {
 
             </div>
 
-
-            {/* Remember / Forgot */}
+            {/* =========================
+                REMEMBER ME / FORGOT
+            ========================= */}
 
             <div className="login-options">
 
@@ -363,8 +375,9 @@ function Login() {
 
             </div>
 
-
-            {/* Login Button */}
+            {/* =========================
+                LOGIN BUTTON
+            ========================= */}
 
             <button
               type="submit"
@@ -382,8 +395,9 @@ function Login() {
 
           </form>
 
-
-          {/* Divider */}
+          {/* =========================
+              DIVIDER
+          ========================= */}
 
           <div className="login-divider">
 
@@ -395,8 +409,9 @@ function Login() {
 
           </div>
 
-
-          {/* Google */}
+          {/* =========================
+              GOOGLE LOGIN
+          ========================= */}
 
           <button
             type="button"
@@ -407,15 +422,18 @@ function Login() {
               )
             }
           >
+
             <span className="google-icon">
               G
             </span>
 
             Login with Google
+
           </button>
 
-
-          {/* Register */}
+          {/* =========================
+              REGISTER
+          ========================= */}
 
           <div className="register-text">
 
@@ -433,9 +451,7 @@ function Login() {
 
       </div>
 
-
       {/* Bottom Tag */}
-
       <div className="login-bottom-tag">
         🌿 Grow green, live clean 🌍
       </div>
