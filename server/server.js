@@ -13,6 +13,10 @@ const aiRoutes = require("./routes/aiRoutes");
 
 const app = express();
 
+// ========================================
+// DATABASE
+// ========================================
+
 connectDB();
 
 // ========================================
@@ -20,23 +24,36 @@ connectDB();
 // ========================================
 
 const allowedOrigins = [
+  // Local development
   "http://localhost:5173",
   "http://127.0.0.1:5173",
 
-  // Vercel Production Frontend
+  // Vercel production
+  "https://digital-plant-care-six.vercel.app",
+
+  // Vercel Git deployment
+  "https://digital-plant-care-git-main-nishant-6f3c.vercel.app",
+
+  // Previous Vercel deployment
   "https://digital-plant-care-d3he9mejv-nishant-6f3c.vercel.app",
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests without origin
-      // such as Postman/server-to-server requests
+      // Allow requests without an Origin
+      // Example: Postman / server-to-server
       if (!origin) {
         return callback(null, true);
       }
 
+      // Allow exact known frontend URLs
       if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Allow Vercel preview deployments
+      if (origin.endsWith(".vercel.app")) {
         return callback(null, true);
       }
 
@@ -48,6 +65,20 @@ app.use(
     },
 
     credentials: true,
+
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "OPTIONS",
+    ],
+
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+    ],
   })
 );
 
@@ -86,8 +117,7 @@ app.use(
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
-    message:
-      "🌱 Smart AI Plant Care API is running",
+    message: "🌱 Smart AI Plant Care API is running",
     version: "1.0.0",
   });
 });
@@ -129,11 +159,9 @@ app.use((req, res) => {
 
 app.use(
   (err, req, res, next) => {
-    console.error(
-      "❌ Server Error:",
-      err
-    );
+    console.error("❌ Server Error:", err);
 
+    // Multer/file upload errors
     if (
       err.message &&
       err.message.includes("Only")
@@ -144,14 +172,13 @@ app.use(
       });
     }
 
+    // CORS error
     if (
-      err.message ===
-      "Not allowed by CORS"
+      err.message === "Not allowed by CORS"
     ) {
       return res.status(403).json({
         success: false,
-        message:
-          "CORS: Origin not allowed",
+        message: "CORS: Origin not allowed",
       });
     }
 
@@ -160,8 +187,7 @@ app.use(
       message: "Internal Server Error",
 
       error:
-        process.env.NODE_ENV ===
-        "development"
+        process.env.NODE_ENV === "development"
           ? err.message
           : undefined,
     });
