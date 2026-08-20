@@ -9,8 +9,7 @@ const MyPlants = () => {
   useEffect(() => {
     const fetchPlants = async () => {
       try {
-        const token =
-          localStorage.getItem("token");
+        const token = localStorage.getItem("token");
 
         if (!token) {
           setError("Please login first.");
@@ -64,7 +63,6 @@ const MyPlants = () => {
         }
 
         setPlants(data.plants || []);
-
       } catch (error) {
         console.error(
           "❌ My Plants Error:",
@@ -75,7 +73,6 @@ const MyPlants = () => {
           error.message ||
             "Failed to fetch plants."
         );
-
       } finally {
         setLoading(false);
       }
@@ -83,6 +80,10 @@ const MyPlants = () => {
 
     fetchPlants();
   }, []);
+
+  // =========================================================
+  // LOADING
+  // =========================================================
 
   if (loading) {
     return (
@@ -97,10 +98,13 @@ const MyPlants = () => {
   return (
     <div className="my-plants-page">
 
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
+
       <div className="my-plants-header">
 
         <div>
-
           <span className="small-title">
             MY COLLECTION
           </span>
@@ -112,17 +116,18 @@ const MyPlants = () => {
           <p>
             View and manage all your saved plants.
           </p>
-
         </div>
 
         <div className="plant-count">
           {plants.length} Plant
-          {plants.length !== 1
-            ? "s"
-            : ""}
+          {plants.length !== 1 ? "s" : ""}
         </div>
 
       </div>
+
+      {/* =====================================================
+          ERROR
+      ===================================================== */}
 
       {error && (
         <div className="plant-error">
@@ -130,34 +135,38 @@ const MyPlants = () => {
         </div>
       )}
 
-      {!error &&
-        plants.length === 0 && (
+      {/* =====================================================
+          EMPTY
+      ===================================================== */}
 
-          <div className="empty-plants">
+      {!error && plants.length === 0 && (
+        <div className="empty-plants">
 
-            <div className="empty-icon">
-              🌿
-            </div>
-
-            <h2>
-              No Plants Saved Yet
-            </h2>
-
-            <p>
-              Scan a plant and save it
-              to your collection.
-            </p>
-
-            <a href="/#scanner">
-              🌱 Scan Your First Plant
-            </a>
-
+          <div className="empty-icon">
+            🌿
           </div>
 
-        )}
+          <h2>
+            No Plants Saved Yet
+          </h2>
+
+          <p>
+            Scan a plant and save it
+            to your collection.
+          </p>
+
+          <a href="/#scanner">
+            🌱 Scan Your First Plant
+          </a>
+
+        </div>
+      )}
+
+      {/* =====================================================
+          PLANTS
+      ===================================================== */}
 
       {plants.length > 0 && (
-
         <div className="my-plants-grid">
 
           {plants.map((plant) => (
@@ -167,26 +176,36 @@ const MyPlants = () => {
               key={plant._id}
             >
 
+              {/* =================================================
+                  IMAGE
+              ================================================= */}
+
               {plant.image ? (
+                <div className="saved-plant-image-wrapper">
 
-                <img
-                  src={plant.image}
-                  alt={
-                    plant.plantName ||
-                    "Plant"
-                  }
-                  className="saved-plant-image"
-                />
+                  <img
+                    src={plant.image}
+                    alt={
+                      plant.plantName ||
+                      "Plant"
+                    }
+                    className="saved-plant-image"
+                  />
 
+                </div>
               ) : (
-
                 <div className="no-plant-image">
                   🌱
                 </div>
-
               )}
 
+              {/* =================================================
+                  CONTENT
+              ================================================= */}
+
               <div className="saved-plant-content">
+
+                {/* PLANT NAME */}
 
                 <h2>
                   🌿{" "}
@@ -194,10 +213,16 @@ const MyPlants = () => {
                     "Unknown Plant"}
                 </h2>
 
+                {/* SCIENTIFIC NAME */}
+
                 <p className="scientific-name">
                   {plant.scientificName ||
                     "Scientific name unavailable"}
                 </p>
+
+                {/* =================================================
+                    INFORMATION
+                ================================================= */}
 
                 <div className="plant-info-grid">
 
@@ -205,6 +230,7 @@ const MyPlants = () => {
                     <span>
                       🌱 Plant Type
                     </span>
+
                     <strong>
                       {plant.plantType ||
                         "Not available"}
@@ -215,6 +241,7 @@ const MyPlants = () => {
                     <span>
                       ❤️ Health
                     </span>
+
                     <strong>
                       {plant.healthStatus ||
                         "Healthy"}
@@ -225,6 +252,7 @@ const MyPlants = () => {
                     <span>
                       🦠 Disease
                     </span>
+
                     <strong>
                       {plant.disease ||
                         "None"}
@@ -235,6 +263,7 @@ const MyPlants = () => {
                     <span>
                       💧 Water
                     </span>
+
                     <strong>
                       {plant.waterFrequency ||
                         "Not available"}
@@ -245,6 +274,7 @@ const MyPlants = () => {
                     <span>
                       ☀️ Sunlight
                     </span>
+
                     <strong>
                       {plant.sunlight ||
                         "Not available"}
@@ -255,6 +285,7 @@ const MyPlants = () => {
                     <span>
                       🌡️ Temperature
                     </span>
+
                     <strong>
                       {plant.temperature ||
                         "Not available"}
@@ -265,6 +296,7 @@ const MyPlants = () => {
                     <span>
                       💦 Humidity
                     </span>
+
                     <strong>
                       {plant.humidity ||
                         "Not available"}
@@ -275,6 +307,7 @@ const MyPlants = () => {
                     <span>
                       🌾 Fertilizer
                     </span>
+
                     <strong>
                       {plant.fertilizer ||
                         "Not available"}
@@ -283,8 +316,11 @@ const MyPlants = () => {
 
                 </div>
 
-                {plant.description && (
+                {/* =================================================
+                    DESCRIPTION
+                ================================================= */}
 
+                {plant.description && (
                   <div className="plant-description">
 
                     <h3>
@@ -296,19 +332,52 @@ const MyPlants = () => {
                     </p>
 
                   </div>
-
                 )}
 
+                {/* =================================================
+                    CARE TIPS
+                ================================================= */}
+
+                {Array.isArray(plant.careTips) &&
+                  plant.careTips.length > 0 && (
+
+                    <div className="saved-care-tips">
+
+                      <h3>
+                        💡 Care Tips
+                      </h3>
+
+                      <div className="saved-tips-list">
+
+                        {plant.careTips.map(
+                          (tip, index) => (
+                            <div
+                              className="saved-tip-item"
+                              key={index}
+                            >
+
+                              <span>
+                                ✓
+                              </span>
+
+                              <p>
+                                {tip}
+                              </p>
+
+                            </div>
+                          )
+                        )}
+
+                      </div>
+
+                    </div>
+                  )}
+
               </div>
-
             </div>
-
           ))}
-
         </div>
-
       )}
-
     </div>
   );
 };

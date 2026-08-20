@@ -1717,3 +1717,308 @@ footer span {
     width: 100%;
   }
 }
+/* =========================================================
+   MY PLANTS - RESPONSIVE FIX
+   ========================================================= */
+
+.my-plants-page {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 30px 20px;
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   SAVED PLANT CARD
+   ========================================================= */
+
+.saved-plant-card {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.saved-plant-content {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   IMAGE
+   ========================================================= */
+
+.saved-plant-image-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.saved-plant-image {
+  width: 100%;
+  max-width: 100%;
+  height: 400px;
+  object-fit: cover;
+  display: block;
+}
+
+/* =========================================================
+   PLANT NAME
+   ========================================================= */
+
+.saved-plant-content h2 {
+  font-size: 26px;
+  line-height: 1.3;
+  margin: 18px 0 8px;
+  overflow-wrap: anywhere;
+}
+
+.scientific-name {
+  font-size: 17px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   INFORMATION
+   ========================================================= */
+
+.plant-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.plant-info-grid > div {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.plant-info-grid span {
+  display: block;
+  font-size: 15px;
+  line-height: 1.4;
+  margin-bottom: 5px;
+}
+
+.plant-info-grid strong {
+  display: block;
+  font-size: 17px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* =========================================================
+   DESCRIPTION
+   ========================================================= */
+
+.plant-description {
+  margin-top: 25px;
+}
+
+.plant-description h3 {
+  font-size: 22px;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+.plant-description p {
+  font-size: 17px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  margin: 0;
+}
+
+/* =========================================================
+   CARE TIPS
+   ========================================================= */
+
+.saved-care-tips {
+  margin-top: 25px;
+  padding-top: 20px;
+}
+
+.saved-care-tips h3 {
+  font-size: 22px;
+  line-height: 1.4;
+  margin-bottom: 14px;
+}
+
+.saved-tips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.saved-tip-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.saved-tip-item > span {
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.saved-tip-item p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+  .my-plants-page {
+    width: 100%;
+    padding: 18px 12px;
+    overflow-x: hidden;
+  }
+
+  .my-plants-header {
+    width: 100%;
+  }
+
+  .my-plants-header h1 {
+    font-size: 28px;
+    line-height: 1.3;
+  }
+
+  .my-plants-header p {
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .plant-count {
+    font-size: 16px;
+  }
+
+  /* Card */
+
+  .saved-plant-card {
+    width: 100%;
+    margin-bottom: 20px;
+    border-radius: 14px;
+  }
+
+  /* Image */
+
+  .saved-plant-image-wrapper {
+    width: 100%;
+    height: auto;
+  }
+
+  .saved-plant-image {
+    width: 100%;
+    height: 320px;
+    object-fit: cover;
+  }
+
+  /* Content */
+
+  .saved-plant-content {
+    padding: 18px;
+  }
+
+  .saved-plant-content h2 {
+    font-size: 24px;
+    line-height: 1.35;
+  }
+
+  .scientific-name {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  /* Information */
+
+  .plant-info-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .plant-info-grid span {
+    font-size: 15px;
+  }
+
+  .plant-info-grid strong {
+    font-size: 17px;
+    line-height: 1.55;
+  }
+
+  /* Description */
+
+  .plant-description h3 {
+    font-size: 21px;
+  }
+
+  .plant-description p {
+    font-size: 17px;
+    line-height: 1.7;
+  }
+
+  /* Care tips */
+
+  .saved-care-tips h3 {
+    font-size: 21px;
+  }
+
+  .saved-tip-item {
+    gap: 9px;
+  }
+
+  .saved-tip-item > span {
+    font-size: 18px;
+  }
+
+  .saved-tip-item p {
+    font-size: 17px;
+    line-height: 1.7;
+  }
+}
+
+/* =========================================================
+   VERY SMALL PHONES
+   ========================================================= */
+
+@media (max-width: 400px) {
+
+  .my-plants-page {
+    padding: 15px 10px;
+  }
+
+  .saved-plant-content {
+    padding: 15px;
+  }
+
+  .saved-plant-image {
+    height: 280px;
+  }
+
+  .saved-plant-content h2 {
+    font-size: 22px;
+  }
+
+  .plant-info-grid strong {
+    font-size: 16px;
+  }
+
+  .plant-description p,
+  .saved-tip-item p {
+    font-size: 16px;
+    line-height: 1.7;
+  }
+}
