@@ -1,3 +1,4 @@
+
 const { GoogleGenAI } = require("@google/genai");
 
 const ai = new GoogleGenAI({
@@ -25,109 +26,53 @@ const cleanAIResponse = (text) => {
   return cleaned.trim();
 };
 
-exports.analyzePlant = async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "Plant image is required",
-      });
-    }
+const sleep = (ms) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
-    const imageUrl =
-      req.file.path ||
-      req.file.secure_url ||
-      req.file.url;
+const getErrorStatus = (error) => {
+  const status = Number(
+    error?.status ||
+      error?.statusCode ||
+      error?.response?.status
+  );
 
-    if (!imageUrl) {
-      return res.status(400).json({
-        success: false,
-        message: "Uploaded image URL not found",
-      });
-    }
+  if (Number.isFinite(status) && status > 0) {
+    return status;
+  }
 
-    console.log("🌐 Cloudinary Image URL:", imageUrl);
+  const message = String(error?.message || "");
 
-    const imageResponse = await fetch(imageUrl);
+  if (/\b503\b|UNAVAILABLE/i.test(message)) return 503;
+  if (/\b429\b|RESOURCE_EXHAUSTED/i.test(message)) return 429;
+  if (/\b504\b|DEADLINE_EXCEEDED/i.test(message)) return 504;
+  if (/\b502\b/i.test(message)) return 502;
+  if (/\b500\b|INTERNAL/i.test(message)) return 500;
+  if (/\b408\b|TIMEOUT/i.test(message)) return 408;
 
-    if (!imageResponse.ok) {
-      throw new Error(
-        `Unable to download image from Cloudinary: ${imageResponse.status}`
-      );
-    }
+  return 0;
+};
 
-    const imageBuffer = Buffer.from(
-      await imageResponse.arrayBuffer()
-    );
+const generateWithGemini = async (
+  base64Image,
+  mimeType,
+  prompt
+) => {
+  const models = [
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+  ];
 
-    const base64Image = imageBuffer.toString("base64");
+  const maxAttempts = 3;
+  let lastError = null;
 
-    const mimeType =
-      req.file.mimetype || "image/jpeg";
-
-    const prompt = `
-You are an expert botanist and plant-care assistant.
-
-Analyze the uploaded plant image carefully.
-
-Identify the plant as accurately as possible.
-
-Return ONLY a single valid JSON object.
-
-The JSON MUST have exactly these fields:
-
-{
-  "plantName": "",
-  "scientificName": "",
-  "plantType": "",
-  "healthStatus": "",
-  "disease": "",
-  "description": "",
-  "waterFrequency": "",
-  "sunlight": "",
-  "temperature": "",
-  "humidity": "",
-  "fertilizer": "",
-  "careTips": []
-}
-
-Rules:
-
-1. Identify the plant from visible characteristics.
-2. Give the most likely common plant name.
-3. Give the scientific name if reasonably identifiable.
-4. If identification is uncertain, write "Identification uncertain".
-5. Do not invent a disease.
-6. If there are no obvious disease symptoms, write "No obvious disease detected".
-7. Provide practical plant-care information.
-8. waterFrequency should explain how often the plant generally needs water.
-9. sunlight should explain the required sunlight.
-10. temperature should provide a suitable temperature range.
-11. humidity should describe suitable humidity.
-12. fertilizer should provide a general fertilizer recommendation.
-13. careTips must contain 3 to 5 useful care tips.
-14. Do not use Markdown.
-15. Do not include explanations outside the JSON object.
-16. Make sure the JSON object is completely closed with }.
-17. Use double quotes for all JSON keys and string values.
-18. Do not add trailing commas.
-`;
-
-    const models = [
-      "gemini-3.6-flash",
-      "gemini-3.5-flash",
-    ];
-
-    let response = null;
-    let lastError = null;
-
-    for (const model of models) {
+  for (const model of models) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         console.log(
-          `🤖 Trying Gemini model: ${model}`
+          `Trying Gemini model ${model}, attempt ${attempt}/${maxAttempts}`
         );
 
-        response = await ai.models.generateContent({
+        const response = await ai.models.generateContent({
           model,
           contents: [
             {
@@ -150,70 +95,223 @@ Rules:
           },
         });
 
-        console.log(
-          `✅ Gemini model worked: ${model}`
-        );
+        console.log(`Gemini success: ${model}`);
 
-        break;
+        return response;
       } catch (error) {
         lastError = error;
 
+        const status = getErrorStatus(error);
+
         console.error(
-          `⚠️ ${model} failed:`,
+          `Gemini failed: model=${model}, status=${status}, attempt=${attempt}`,
           error.message
         );
 
-        if (
-          error.status !== 503 &&
-          error.status !== 429
-        ) {
+        const retryable = [
+          408, 429, 500, 502, 503, 504,
+        ].includes(status);
+
+        if (!retryable) {
           throw error;
+        }
+
+        if (attempt < maxAttempts) {
+          const delay = 1000 * Math.pow(2, attempt - 1);
+
+          console.log(`Retrying in ${delay}ms`);
+          await sleep(delay);
         }
       }
     }
 
-    if (!response) {
-      throw (
-        lastError ||
-        new Error("All Gemini models failed")
+    console.log(`All attempts failed for ${model}. Trying next model.`);
+  }
+
+  throw lastError || new Error("All Gemini models failed");
+};
+
+exports.analyzePlant = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Plant image is required",
+      });
+    }
+
+    const imageUrl =
+      req.file.path ||
+      req.file.secure_url ||
+      req.file.url;
+
+    if (!imageUrl) {
+      return res.status(400).json({
+        success: false,
+        message: "Uploaded image URL not found",
+      });
+    }
+
+    console.log("Plant image URL:", imageUrl);
+
+    const imageResponse = await fetch(imageUrl);
+
+    if (!imageResponse.ok) {
+      throw new Error(
+        `Unable to download image: HTTP ${imageResponse.status}`
       );
     }
 
-    let result = response.text;
+    const imageBuffer = Buffer.from(
+      await imageResponse.arrayBuffer()
+    );
+
+    const base64Image = imageBuffer.toString("base64");
+    const mimeType = req.file.mimetype || "image/jpeg";
+
+    if (!mimeType.startsWith("image/")) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload a valid image",
+      });
+    }
+
+    const validationPrompt = `
+You are a strict plant image classifier.
+
+Determine whether the uploaded image clearly contains a real biological plant.
+
+Plants include trees, shrubs, herbs, grasses, flowers, indoor plants,
+outdoor plants, crops, seedlings, leaves, stems, branches, fruits or
+vegetables when clearly part of a plant.
+
+Do not classify animals, humans, machines, furniture, buildings,
+tools, toys, artificial plants, plastic plants, drawings, screenshots,
+or unrelated objects as real plants.
+
+If a real biological plant is clearly visible, return true.
+Otherwise, return false.
+
+Return ONLY valid JSON in this format:
+{"isPlant": true}
+
+or
+
+{"isPlant": false}
+
+Do not include any other fields or explanations.
+`;
+
+    console.log("Starting plant validation...");
+
+    const validationResponse = await generateWithGemini(
+      base64Image,
+      mimeType,
+      validationPrompt
+    );
+
+    const validationResult = cleanAIResponse(
+      validationResponse.text
+    );
+
+    if (!validationResult) {
+      throw new Error("Gemini returned an empty validation response");
+    }
+
+    let validationData;
+
+    try {
+      validationData = JSON.parse(validationResult);
+    } catch (error) {
+      console.error("Invalid validation JSON:", validationResult);
+
+      return res.status(502).json({
+        success: false,
+        message: "AI returned an invalid validation response. Please try again.",
+      });
+    }
+
+    if (validationData.isPlant !== true) {
+      return res.status(400).json({
+        success: false,
+        code: "NOT_A_PLANT",
+        isPlant: false,
+        message:
+          "This image does not appear to contain a plant. Please upload a clear plant image.",
+      });
+    }
+
+    console.log("Plant image validated.");
+
+    const prompt = `
+You are an expert botanist and plant-care assistant.
+
+Analyze only the plant visible in the uploaded image.
+
+Return ONLY one valid JSON object with exactly these fields:
+
+{
+  "plantName": "",
+  "scientificName": "",
+  "plantType": "",
+  "healthStatus": "",
+  "disease": "",
+  "description": "",
+  "waterFrequency": "",
+  "sunlight": "",
+  "temperature": "",
+  "humidity": "",
+  "fertilizer": "",
+  "careTips": []
+}
+
+Rules:
+1. Identify the plant using visible characteristics.
+2. Provide its most likely common name.
+3. Give its scientific name only when reasonably identifiable.
+4. If uncertain, use "Identification uncertain".
+5. Do not invent a disease.
+6. If no obvious symptoms are visible, use "No obvious disease detected".
+7. Provide practical care guidance suitable for the identified plant.
+8. Explain watering frequency, sunlight, temperature, humidity and fertilizer.
+9. Include 3 to 5 useful care tips in careTips.
+10. Do not discuss unrelated objects.
+11. Do not use Markdown.
+12. Do not add explanations outside the JSON.
+13. Use double quotes for JSON keys and string values.
+14. Do not add trailing commas.
+15. Ensure the JSON object is complete.
+`;
+
+    console.log("Starting full plant analysis...");
+
+    const response = await generateWithGemini(
+      base64Image,
+      mimeType,
+      prompt
+    );
+
+    const result = cleanAIResponse(response.text);
 
     if (!result) {
-      throw new Error(
-        "Gemini returned an empty response"
-      );
+      throw new Error("Gemini returned an empty analysis response");
     }
-
-    result = cleanAIResponse(result);
-
-    console.log("🤖 Cleaned Gemini Response:");
-    console.log(result);
 
     let plantData;
 
     try {
       plantData = JSON.parse(result);
-    } catch (parseError) {
-      console.error(
-        "❌ Invalid AI JSON:",
-        result
-      );
+    } catch (error) {
+      console.error("Invalid AI JSON:", result);
 
-      return res.status(500).json({
+      return res.status(502).json({
         success: false,
-        message:
-          "AI returned invalid plant information. Please try scanning again.",
+        message: "AI returned invalid plant information. Please try again.",
       });
     }
 
-    if (
-      !plantData.plantName ||
-      !plantData.plantType
-    ) {
-      return res.status(500).json({
+    if (!plantData.plantName || !plantData.plantType) {
+      return res.status(422).json({
         success: false,
         message:
           "AI could not identify the plant properly. Please upload a clearer image.",
@@ -224,75 +322,44 @@ Rules:
       plantData.careTips = [];
     }
 
-    console.log(
-      "🌱 Plant Name:",
-      plantData.plantName
-    );
-
-    console.log(
-      "🔬 Scientific Name:",
-      plantData.scientificName
-    );
-
-    console.log(
-      "❤️ Health:",
-      plantData.healthStatus
-    );
-
-    console.log(
-      "🦠 Disease:",
-      plantData.disease
-    );
-
-    console.log(
-      "💧 Water:",
-      plantData.waterFrequency
-    );
-
-    console.log(
-      "☀️ Sunlight:",
-      plantData.sunlight
-    );
-
-    console.log(
-      "🌡️ Temperature:",
-      plantData.temperature
-    );
-
-    console.log(
-      "💦 Humidity:",
-      plantData.humidity
-    );
-
-    console.log(
-      "🌾 Fertilizer:",
-      plantData.fertilizer
-    );
-
-    console.log(
-      "💡 Care Tips:",
-      plantData.careTips
-    );
-
-    console.log(
-      "✅ Plant analysis completed"
-    );
+    console.log("Plant analysis completed:", plantData.plantName);
 
     return res.status(200).json({
       success: true,
+      isPlant: true,
       message: "Plant analyzed successfully",
       analysis: plantData,
     });
   } catch (error) {
-    console.error(
-      "❌ Plant AI Error:",
-      error
-    );
+    console.error("Plant AI Error:", error);
+
+    const status = getErrorStatus(error);
+
+    if (status === 429) {
+      return res.status(429).json({
+        success: false,
+        code: "AI_RATE_LIMIT",
+        message:
+          "AI request limit reached. Please wait before trying again.",
+      });
+    }
+
+    if ([408, 500, 502, 503, 504].includes(status)) {
+      return res.status(503).json({
+        success: false,
+        code: "AI_TEMPORARILY_UNAVAILABLE",
+        message:
+          "Plant analysis is temporarily unavailable. Please try again shortly.",
+      });
+    }
 
     return res.status(500).json({
       success: false,
-      message: "Failed to analyze plant",
-      error: error.message,
+      message: "Failed to analyze plant.",
+      error:
+        process.env.NODE_ENV === "development"
+          ? error.message
+          : undefined,
     });
   }
 };
