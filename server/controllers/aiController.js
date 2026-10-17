@@ -42,8 +42,8 @@ const getErrorStatus = (error) => {
 
   const message = String(error?.message || "");
 
-  if (/\b503\b|UNAVAILABLE/i.test(message)) return 503;
   if (/\b429\b|RESOURCE_EXHAUSTED/i.test(message)) return 429;
+  if (/\b503\b|UNAVAILABLE/i.test(message)) return 503;
   if (/\b504\b|DEADLINE_EXCEEDED/i.test(message)) return 504;
   if (/\b502\b/i.test(message)) return 502;
   if (/\b500\b|INTERNAL/i.test(message)) return 500;
@@ -62,7 +62,7 @@ const generateWithGemini = async (
     "gemini-3.5-flash",
   ];
 
-  const maxAttempts = 3;
+  const maxAttempts = 2;
   let lastError = null;
 
   for (const model of models) {
@@ -100,7 +100,6 @@ const generateWithGemini = async (
         return response;
       } catch (error) {
         lastError = error;
-
         const status = getErrorStatus(error);
 
         console.error(
@@ -108,8 +107,17 @@ const generateWithGemini = async (
           error.message
         );
 
+        // Do not repeatedly retry quota/rate-limit errors.
+        // Try the next configured model instead.
+        if (status === 429) {
+          console.warn(
+            `Quota/rate limit reached for ${model}. Trying next model if available.`
+          );
+          break;
+        }
+
         const retryable = [
-          408, 429, 500, 502, 503, 504,
+          408, 500, 502, 503, 504,
         ].includes(status);
 
         if (!retryable) {
@@ -117,7 +125,7 @@ const generateWithGemini = async (
         }
 
         if (attempt < maxAttempts) {
-          const delay = 1000 * Math.pow(2, attempt - 1);
+          const delay = 2000 * attempt;
 
           console.log(`Retrying in ${delay}ms`);
           await sleep(delay);
@@ -125,7 +133,7 @@ const generateWithGemini = async (
       }
     }
 
-    console.log(`All attempts failed for ${model}. Trying next model.`);
+    console.log(`Attempts exhausted for ${model}.`);
   }
 
   throw lastError || new Error("All Gemini models failed");
@@ -133,6 +141,16 @@ const generateWithGemini = async (
 
 exports.analyzePlant = async (req, res) => {
   try {
+    if (!process.env.GEMINI_API_KEY) {
+      console.error("GEMINI_API_KEY is missing");
+
+      return res.status(500).json({
+        success: false,
+        code: "AI_CONFIGURATION_ERROR",
+        message: "AI service is not configured correctly.",
+      });
+    }
+
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -152,6 +170,15 @@ exports.analyzePlant = async (req, res) => {
       });
     }
 
+    const mimeType = req.file.mimetype || "";
+
+    if (!["image/jpeg", "image/png", "image/webp"].includes(mimeType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload a valid JPG, PNG, or WEBP image.",
+      });
+    }
+
     console.log("Plant image URL:", imageUrl);
 
     const imageResponse = await fetch(imageUrl);
@@ -167,14 +194,6 @@ exports.analyzePlant = async (req, res) => {
     );
 
     const base64Image = imageBuffer.toString("base64");
-    const mimeType = req.file.mimetype || "image/jpeg";
-
-    if (!mimeType.startsWith("image/")) {
-      return res.status(400).json({
-        success: false,
-        message: "Please upload a valid image",
-      });
-    }
 
     const validationPrompt = `
 You are a strict plant image classifier.
@@ -227,7 +246,8 @@ Do not include any other fields or explanations.
 
       return res.status(502).json({
         success: false,
-        message: "AI returned an invalid validation response. Please try again.",
+        message:
+          "AI returned an invalid validation response. Please try again.",
       });
     }
 
@@ -306,7 +326,8 @@ Rules:
 
       return res.status(502).json({
         success: false,
-        message: "AI returned invalid plant information. Please try again.",
+        message:
+          "AI returned invalid plant information. Please try again.",
       });
     }
 
@@ -340,7 +361,7 @@ Rules:
         success: false,
         code: "AI_RATE_LIMIT",
         message:
-          "AI request limit reached. Please wait before trying again.",
+          "Gemini request limit reached. Please wait before trying again.",
       });
     }
 
