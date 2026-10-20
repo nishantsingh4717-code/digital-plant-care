@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import API_URL from "../services/api";
 
 function Login() {
@@ -50,20 +50,15 @@ function Login() {
         throw new Error("Login failed. Token not received.");
       }
 
-      // Save authentication data
       localStorage.setItem("token", data.token);
 
       if (data.user) {
         localStorage.setItem("user", JSON.stringify(data.user));
       }
 
-      setMessage("✅ Login successful!");
-
-      // Redirect to Home page
       navigate("/", { replace: true });
     } catch (error) {
       console.error("Login Error:", error);
-
       setMessage(
         `❌ ${error.message || "Unable to connect to server."}`
       );
@@ -165,7 +160,9 @@ function Login() {
                 <span>Remember me</span>
               </label>
 
-              <a href="/forgot-password">Forgot Password?</a>
+              <Link to="/forgot-password">
+                Forgot Password?
+              </Link>
             </div>
 
             <button
@@ -181,11 +178,7 @@ function Login() {
             <div
               role="status"
               aria-live="polite"
-              className={
-                message.startsWith("❌")
-                  ? "scanner-error"
-                  : "scanner-success"
-              }
+              className="scanner-error"
               style={{ marginTop: "16px", marginBottom: 0 }}
             >
               {message}
@@ -211,7 +204,7 @@ function Login() {
 
           <p className="auth-switch">
             Don't have an account?{" "}
-            <a href="/register">Create an account</a>
+            <Link to="/register">Create an account</Link>
           </p>
         </section>
       </div>
