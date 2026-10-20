@@ -4244,3 +4244,216 @@ body {
   height: auto;
   overflow: visible;
 }
+
+/* MOBILE REGISTER AND LOGIN FIX */
+
+.auth-page {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 32px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow-x: clip;
+}
+
+.auth-page .login-container,
+.auth-page .register-container {
+  width: 100%;
+  max-width: 1150px;
+  min-width: 0;
+  margin: 0 auto;
+  gap: 32px;
+}
+
+.auth-page .login-card,
+.auth-page .register-card {
+  width: 100%;
+  min-width: 0;
+  max-width: 510px;
+  box-sizing: border-box;
+}
+
+.auth-page .login-form-group {
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 20px;
+}
+
+.auth-page .login-form-group .input-wrapper {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-page .login-form-group .input-icon {
+  flex: 0 0 24px;
+  width: 24px;
+  text-align: center;
+}
+
+.auth-page .login-form-group .input-wrapper input {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  max-width: 100%;
+  padding: 14px 8px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.auth-page .login-form-group .password-toggle {
+  flex: 0 0 34px;
+  width: 34px;
+  min-width: 34px;
+  padding: 5px 0;
+  border: none;
+  background: transparent;
+  font-size: 19px;
+}
+
+.auth-page .login-submit {
+  width: 100%;
+  max-width: 100%;
+  min-height: 54px;
+  padding: 14px 12px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #4caf50, #25863c);
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.auth-page .register-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 22px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.auth-page .login-bottom-tag {
+  position: static;
+  width: 100%;
+  max-width: 100%;
+  margin: 22px auto 0;
+  padding: 0 8px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.auth-page .leaf-decoration {
+  pointer-events: none;
+}
+
+@media (max-width: 700px) {
+  .auth-page {
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 24px 16px;
+    justify-content: flex-start;
+  }
+
+  .auth-page .login-container,
+  .auth-page .register-container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    max-width: 480px;
+    min-height: 0;
+    gap: 20px;
+  }
+
+  .auth-page .login-intro,
+  .auth-page .register-intro {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .auth-page .login-card,
+  .auth-page .register-card {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0 auto;
+    padding: 28px 20px;
+    border-radius: 22px;
+  }
+
+  .auth-page .login-card h2,
+  .auth-page .register-card h2 {
+    overflow-wrap: anywhere;
+  }
+
+  .auth-page .login-card .login-subtitle {
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+
+  .auth-page .login-form-group label {
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .auth-page .login-form-group .input-wrapper {
+    gap: 7px;
+    min-height: 56px;
+    padding: 0 10px;
+    border: 1px solid #d5e4d7;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  .auth-page .login-form-group .input-wrapper input {
+    border: none;
+    outline: none;
+    box-shadow: none;
+    background: transparent;
+    padding: 14px 2px;
+  }
+
+  .auth-page .login-form-group .input-wrapper input:focus {
+    box-shadow: none;
+  }
+
+  .auth-page .login-submit {
+    min-height: 54px;
+  }
+
+  .auth-page .login-bottom-tag {
+    margin-top: 20px;
+    font-size: 14px;
+  }
+
+  .auth-page .leaf-decoration {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .auth-page {
+    padding: 18px 10px;
+  }
+
+  .auth-page .login-card,
+  .auth-page .register-card {
+    padding: 24px 14px;
+  }
+
+  .auth-page .login-form-group .input-wrapper {
+    gap: 5px;
+    padding: 0 7px;
+  }
+
+  .auth-page .login-form-group .input-wrapper input {
+    font-size: 14px;
+  }
+}
